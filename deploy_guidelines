@@ -1,0 +1,83 @@
+
+Run your Service Locally
+
+As a good practice, you should run your service locally, prior to deploying it. To run it locally, you will need to run both a copy of the Service and a copy of the Proxy.
+
+    Build and tag a Docker image for the Hello World Service.
+
+    > docker build -t <your-dockerhub-username>/hello-world:ex2 .
+
+    Run the Service.
+
+    > docker run -it --rm --name hello-world -p 8080:8080 -v `pwd`/logs:/var/log <your-dockerhub-username>/hello-world:ex2
+
+    In another terminal, run the Proxy.
+
+    > docker run -it --rm --name hello-world-proxy -p 9000:9000 --env USER_FUNCTION_HOST=host.docker.internal cloudstateio/cloudstate-proxy-dev-mode:0.5.1-98-a596eae7
+
+    Issue a command to the service using grpcurl. Since it is running locally, use localhost:9000 for the host/port and add the -plaintext flag:
+
+    > grpcurl -plaintext -d '{"user_id":"<Some Id>","name":"<Some Name>"}' localhost:9000 com.example.helloworld.HelloWorld/SayHello
+
+    Assuming you have done everything correctly, you should get back the following:
+
+    {
+      "message": "Hello <Some Name>"
+    }
+
+Deploy and run your Service
+
+Now that local testing is complete, we will deploy and run the Service in Akka Serverless.
+
+    Push the container image built in the previous step to Docker Hub.
+
+    > docker push <your-dockerhub-username>/hello-world:ex2
+
+        Note: If for whatever reason you need to rebuild and redeploy while doing this exercise, you may tag your additional container images ex2.1, ex2.2 and so on.
+    If you haven't already done so, set lightbend-training as the current Akka Serverless project:
+
+    > akkasls config set project lightbend-training
+
+    Deploy the Hello World Service.
+   >akkasls docker add-credentials --docker-server <my-server> \
+  --docker-username <my-username> \
+  --docker-email <my-email> \
+  --docker-password <my-password>
+  
+    > akkasls svc deploy hello-world <your-dockerhub-username>/hello-world:ex2
+
+    Service 'hello-world' was successfully deployed.
+
+    Check the status of the Hello World Service and confirm it is "Ready" before moving to the next step.
+
+    > akkasls svc list
+
+    NAME          AGE  REPLICAS   STATUS   DESCRIPTION
+    hello-world   2m   1          Ready
+
+    Expose the Hello World Service.
+
+    > akkasls svc expose hello-world --enable-cors
+
+    Service 'hello-world' was successfully exposed at: <your-service's-URL>
+
+    Note: the expose command is only required after the first deployment of the service. Subsequent deployments will reuse the same configuration.
+
+    Copy the <your-service's-URL> from the output of the previous step. You will use this URL to test your service in the following steps.
+
+    Note: If at some point you forget or misplace your service's URL, you may obtain it using the Akka Serverless command line interface:
+
+    > akkasls svc get hello-world
+
+    Use grpcurl to make a request at <your-service's-URL> on port 443.
+
+    > grpcurl -d '{"user_id":"<Some Id>","name":"<Some Name>"}' <your-service's-URL>
+    :443 com.example.helloworld.HelloWorld/SayHello
+
+    Assuming you have done everything correctly, you should get back the following:
+
+    {
+      "message": "Hello <Some Name>"
+    }
+
+
